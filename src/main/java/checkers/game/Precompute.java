@@ -33,6 +33,9 @@ public class Precompute {
     public static int[][][] kingMoves;
 
     public static long[][] kingRays;
+
+    //{white, black}[index]
+    public static long[][] manCaptureMask;
     
     
     /**
@@ -54,6 +57,8 @@ public class Precompute {
 
         kingMoves = new int[64][4][];
         kingRays = new long[64][4];
+
+        manCaptureMask = new long[2][64];
 
         for (int index = 0; index < 64; index++) {
             
@@ -77,6 +82,7 @@ public class Precompute {
                     int dy = Math.abs( index/8 - target/8);
                     if (dx == 1 && dy == 1 && target < 64 && target >= 0){
                         manMoves[colourIndex][index][j] = target;
+                        manCaptureMask[colourIndex][index] |= 1L << target;
                     }
                     else{
                         manMoves[colourIndex][index][j] = -1;
