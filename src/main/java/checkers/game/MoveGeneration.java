@@ -1,6 +1,7 @@
 package checkers.game;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import checkers.game.util.Bitboard;
@@ -15,7 +16,16 @@ public class MoveGeneration {
 
     Board board;
     List<Move> moveList;
+    List<Move> tempMoves;
     boolean mustCapture;
+
+    long friendlyBitboard;
+    long enemyBitboard;
+    
+    int promotionRank;
+    long promotionMask;
+
+    long opponentAttackMap;
 
     public void init(){
 
@@ -46,158 +56,131 @@ public class MoveGeneration {
         this.board = board;
         init();
 
-        List<Move> tempMoves = new ArrayList<>(16);
-        long friendlyBitboard = board.getColourPieceMask(colourToMoveIndex);
-        long enemyBitboard = board.getColourPieceMask(opponentColourIndex);
+        generateManAttackMap();
 
-        PieceList manPieces = board.getPieceList(Piece.man, colourToMoveIndex);
-        int promotionRank = (whiteToMove) ? 7 : 0;
-        long promotionMask = ((long)0b11111111) << promotionRank*8;
-        for (int i = 0; i < manPieces.size(); i++) {
-            int square = manPieces.at(i);
-            for (int dir = 0; dir < 2; dir++) {
-                int firstTarget = Precompute.manMoves[colourToMoveIndex][square][dir];
-                int secondTarget = Precompute.manCaptures[colourToMoveIndex][square][dir];
-                int enemyIndex = -1;
-                if (firstTarget == -1) continue;
-                if (Bitboard.contains(board.getColourPieceMask(opponentColourIndex), firstTarget)){
-                    enemyIndex = firstTarget;
-                    if (secondTarget != -1) {
-                        if ((board.getAllBitBoards() & 1L << secondTarget)==0){
-                            if ((promotionMask & 1L << secondTarget) == 0){
-                                moveList.add(new Move(square, secondTarget, enemyIndex, false));
-                            }
-                            else{
-                                moveList.add(new Move(square, secondTarget, enemyIndex, false, true));
-                            }
-                        }
-                    }
-                }
-                
-                if (!mustCapture){
-                    if ((board.getAllBitBoards() & 1L << firstTarget) == 0){
-                        if ((promotionMask & 1L << firstTarget) == 0){
-                            tempMoves.add(new Move(square, firstTarget, false));
-                        }
-                        else{
-                            tempMoves.add(new Move(square, firstTarget, false, true));
-                        }
-                    }
-                    else{
-                        if (secondTarget == -1) continue;
-                        if (Bitboard.contains(enemyBitboard, firstTarget)){
-                            if ((board.getAllBitBoards() & 1L << secondTarget)==0){
-                                mustCapture = true;
-                            }
-                        }
-                    }
-                }
-                
-            }
-        }
+        tempMoves = new ArrayList<>(16);
+        friendlyBitboard = board.getColourPieceMask(colourToMoveIndex);
+        enemyBitboard = board.getColourPieceMask(opponentColourIndex);
 
         
         PieceList kings = board.getPieceList(Piece.king, colourToMoveIndex);
-        for (int i_ = 0; i_ < kings.size(); i_++) {
-            int square = kings.at(i_);
-            for (int rayIndex = 0; rayIndex < 4; rayIndex++) {
-                boolean foundEnemy = false;
-                int enemyIndex = -1;
-                for (int target : Precompute.kingMoves[square][rayIndex]) {
-                    if (target == 62 || target == 7){
-                        System.out.println("square: " + square + ", rayIndex: " + rayIndex + ", target: " + target);
-                    }
-                    if (Bitboard.contains(friendlyBitboard, target)){
-                        break;
-                    }
-                    if (Bitboard.contains(enemyBitboard, target)){
-                        if (foundEnemy) break;
-                        foundEnemy = true;
-                        enemyIndex = target;
-                    }
-                    if ((board.getAllBitBoards() & 1L << target) == 0){
-                        if (foundEnemy){
-                            moveList.add(new Move(square, target, enemyIndex, true));
-                        }
-                        else if (!mustCapture && !foundEnemy){
-                            tempMoves.add(new Move(square, target, true));
-                        }
-                        if (!mustCapture) mustCapture = foundEnemy;
-                    }
-                }
+        for (int i = 0; i < kings.size(); i++) {
+            generateKingMoves(kings.at(i));
+        }
+
+        PieceList manPieces = board.getPieceList(Piece.man, colourToMoveIndex);
+        int[] pieceListIndex = new int[manPieces.size()];
+        int numIndexesAttack = 0;
+        int numIndexesNotAttack = pieceListIndex.length-1;
+        for (int i = 0; i < pieceListIndex.length; i++) {
+            if (Bitboard.contains(opponentAttackMap, manPieces.at(i))){
+                pieceListIndex[numIndexesAttack] = i;
+                numIndexesAttack ++;
             }
+            else{
+                pieceListIndex[numIndexesNotAttack] = i;
+                numIndexesNotAttack --;
+            }
+        }
+        promotionRank = (whiteToMove) ? 7 : 0;
+        promotionMask = ((long)0b11111111) << promotionRank*8;
+        // for (int i = 0; i< manPieces.size(); i++) {
+        //     int square = manPieces.at(i);
+        //     generateManMoves(square);
+        // }
+        for (int i : pieceListIndex) {
+            int square = manPieces.at(i);
+            generateManMoves(square);
         }
 
         if (!mustCapture) moveList.addAll(tempMoves);
 
         return moveList;
     }
+    
+    private void generateManAttackMap() {
+        opponentAttackMap = 0;
+        PieceList enemyMen = board.getPieceList(Piece.man, opponentColourIndex);
+        for (int i = 0; i < enemyMen.size(); i++) {
+            int square = enemyMen.at(i);
+            opponentAttackMap |= Precompute.manCaptureMask[opponentColourIndex][square];
+        }
+    }
+
+    private void generateKingMoves(int square){
+        for (int rayIndex = 0; rayIndex < 4; rayIndex++) {
+            boolean foundEnemy = false;
+            int enemyIndex = -1;
+            for (int target : Precompute.kingMoves[square][rayIndex]) {
+                if (target == 62 || target == 7){
+                    System.out.println("square: " + square + ", rayIndex: " + rayIndex + ", target: " + target);
+                }
+                if (Bitboard.contains(friendlyBitboard, target)){
+                    break;
+                }
+                if (Bitboard.contains(enemyBitboard, target)){
+                    if (foundEnemy) break;
+                    foundEnemy = true;
+                    enemyIndex = target;
+                }
+                if ((board.getAllBitBoards() & 1L << target) == 0){
+                    if (foundEnemy){
+                        moveList.add(new Move(square, target, enemyIndex, true));
+                    }
+                    else if (!mustCapture && !foundEnemy){
+                        tempMoves.add(new Move(square, target, true));
+                    }
+                    if (!mustCapture) mustCapture = foundEnemy;
+                }
+            }
+        }
+    }
+
+
+    private void generateManMoves(int square){
+        for (int dir = 0; dir < 2; dir++) {
+            int firstTarget = Precompute.manMoves[colourToMoveIndex][square][dir];
+            int secondTarget = Precompute.manCaptures[colourToMoveIndex][square][dir];
+            int enemyIndex = -1;
+            if (firstTarget == -1) continue;
+            if (Bitboard.contains(board.getColourPieceMask(opponentColourIndex), firstTarget)){
+                enemyIndex = firstTarget;
+                if (secondTarget != -1) {
+                    if ((board.getAllBitBoards() & 1L << secondTarget)==0){
+                        if ((promotionMask & 1L << secondTarget) == 0){
+                            moveList.add(new Move(square, secondTarget, enemyIndex, false));
+                        }
+                        else{
+                            moveList.add(new Move(square, secondTarget, enemyIndex, false, true));
+                        }
+                    }
+                }
+            }
+            
+            if (!mustCapture){
+                if ((board.getAllBitBoards() & 1L << firstTarget) == 0){
+                    if ((promotionMask & 1L << firstTarget) == 0){
+                        tempMoves.add(new Move(square, firstTarget, false));
+                    }
+                    else{
+                        tempMoves.add(new Move(square, firstTarget, false, true));
+                    }
+                }
+                else{
+                    if (secondTarget == -1) continue;
+                    if (Bitboard.contains(enemyBitboard, firstTarget)){
+                        if ((board.getAllBitBoards() & 1L << secondTarget)==0){
+                            mustCapture = true;
+                        }
+                    }
+                }
+            }
+            
+        }
+    }
 
     public List<Move> getMoveList() {
         return moveList;
     }
 
-    @SuppressWarnings("unused")
-    private void generateManMoves() {
-        PieceList manPieces = board.getPieceList(Piece.man, colourToMoveIndex);
-        int promotionRank = (whiteToMove) ? 7 : 0;
-        long promotionMask = ((long)0b11111111) << promotionRank;
-        for (int i = 0; i < manPieces.size(); i++) {
-            int square = manPieces.at(i);
-            for (int dir = 0; dir < 2; dir++) {
-                int firstTarget = Precompute.manMoves[colourToMoveIndex][square][dir];
-                if (firstTarget == -1) continue;
-                if (mustCapture){
-                    if (!Bitboard.contains(board.getColourPieceMask(opponentColourIndex), firstTarget)){
-                        continue;
-                    }
-                    int secondTarget = Precompute.manCaptures[colourToMoveIndex][square][dir];
-                    if (secondTarget == -1) continue;
-                    if ((board.getAllBitBoards() & 1L << secondTarget)==0){
-                        if ((promotionMask & 1L << secondTarget) == 0){
-                            moveList.add(new Move(square, secondTarget, false));
-                        }
-                        else{
-                            moveList.add(new Move(square, secondTarget, false, true));
-                        }
-                    }
-                }
-                else{
-                    if ((board.getAllBitBoards() & 1L << firstTarget) == 0){
-                        if ((promotionMask & 1L << firstTarget) == 0){
-                            moveList.add(new Move(square, firstTarget, false));
-                        }
-                        else{
-                            moveList.add(new Move(square, firstTarget, false, true));
-                        }
-                    }
-                }
-                
-            }
-        }
-    }
-    @SuppressWarnings("unused")
-    private void generateKingMoves() {
-        PieceList kings = board.getPieceList(Piece.king, colourToMoveIndex);
-        long friendlyBitboard = board.getColourPieceMask(colourToMoveIndex);
-        long enemyBitboard = board.getColourPieceMask(opponentColourIndex);
-        for (int i_ = 0; i_ < kings.size(); i_++) {
-            int square = kings.at(i_);
-            for (int rayIndex = 0; rayIndex < 4; rayIndex++) {
-                boolean foundEnemy = false;
-                for (int target : Precompute.kingMoves[square][rayIndex]) {
-                    if (Bitboard.contains(friendlyBitboard, target)){
-                        break;
-                    }
-                    if (Bitboard.contains(enemyBitboard, target)){
-                        if (foundEnemy) break;
-                        foundEnemy = true;
-                    }
-                    if ((board.getAllBitBoards() & 1L << target) == 0 && foundEnemy){
-                        moveList.add(new Move(square, target, true));
-                    }
-                }
-            }
-        }
-    }
 }
