@@ -4,9 +4,9 @@ public class TranspositionTable {
     public final int lookUpFailed = Integer.MIN_VALUE;
 
     
-    final int Exact = 0;
-    final int LowerBound = 1;
-    final int UpperBound = 2;
+    public static final int Exact = 0;
+    public static final int LowerBound = 1;
+    public static final int UpperBound = 2;
     
 
     Entry[] entries;
@@ -15,10 +15,11 @@ public class TranspositionTable {
     boolean enabled = true;
     Board board;
 
-    TranspositionTable(Board board, int size){
+    public TranspositionTable(Board board, int size){
         this.board = board;
         this.size = (long) size;
         entries = new Entry[size];
+        clear();
     }
 
     public void clear(){
@@ -28,17 +29,22 @@ public class TranspositionTable {
     }
     
     public int getIndex(){
+        // System.out.println("zobristkey: " + board.ZobristKey);
         return (int) (board.ZobristKey % size);
     }
 
     public Move getStoredMove(){
         return entries[getIndex()].move;
     }
+    public int getStoredValue() {
+        return entries[getIndex()].value;
+    }
 
     public int LookUpEvaltuation(int depth, int plyFrom, int alpha, int beta){
         if (!enabled) return lookUpFailed;
 
         Entry entry = entries[getIndex()];
+        // if (entry == null) return lookUpFailed;
         if (entry.key == board.ZobristKey){
             if (entry.depth >= depth){
                 int value = entry.value;
@@ -54,6 +60,10 @@ public class TranspositionTable {
             }
         }
         return lookUpFailed;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
     
     public void StoreEvaluation(int depth, int numPlySearched, int eval, int evalType, Move move){
@@ -87,4 +97,5 @@ public class TranspositionTable {
         public Entry() {
         }
     }
+
 }

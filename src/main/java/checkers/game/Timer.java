@@ -9,6 +9,7 @@ public class Timer extends AnimationTimer{
     long time;
 
     boolean paused;
+    boolean wasPaused;
 
     public Timer(AIPlayer player, long time){
         this.player = player;
@@ -29,7 +30,13 @@ public class Timer extends AnimationTimer{
     public void start() {
         // TODO Auto-generated method stub
         super.start();
-        if (!paused) start = System.nanoTime();
+        if (!paused) {
+            start = System.nanoTime();
+            wasPaused = true;
+        } else wasPaused = false;
+        if (!wasPaused){
+            // player;
+        }
         paused = false;
     }
 
@@ -45,7 +52,9 @@ public class Timer extends AnimationTimer{
     }
 
     public void finished(){
-        player.move(player.chooseMove());
+        Move m = player.chooseMove();
+        System.out.println("AI move: " + m);
+        player.move(m);
     }
     
 }
