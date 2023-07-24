@@ -1,7 +1,6 @@
 package checkers.game;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import checkers.game.util.Bitboard;
@@ -26,6 +25,9 @@ public class MoveGeneration {
     long promotionMask;
 
     long opponentAttackMap;
+
+    int previousColourIndexMoved = -1;
+    boolean samePlayer;
 
     public void init(){
 
@@ -57,10 +59,28 @@ public class MoveGeneration {
         init();
 
         generateManAttackMap();
-
-        tempMoves = new ArrayList<>(16);
         friendlyBitboard = board.getColourPieceMask(colourToMoveIndex);
         enemyBitboard = board.getColourPieceMask(opponentColourIndex);
+
+        if (previousColourIndexMoved == colourToMoveIndex){
+            samePlayer = true;
+            mustCapture = true;
+            // System.out.println("capture");
+            int square = board.getLastSquareMovedTo();
+            byte movedType = Piece.piece(board.get(square));
+            if (movedType == Piece.king){
+                generateKingMoves(square);
+            }
+            else {
+                generateManMoves(square);
+            }
+            if (moveList.size() == 0){
+                
+            }
+            return moveList;
+        } else samePlayer = false;
+
+        tempMoves = new ArrayList<>(16);
 
         
         PieceList kings = board.getPieceList(Piece.king, colourToMoveIndex);
@@ -94,7 +114,7 @@ public class MoveGeneration {
         }
 
         if (!mustCapture) moveList.addAll(tempMoves);
-
+        previousColourIndexMoved = colourToMoveIndex;
         return moveList;
     }
     
@@ -112,9 +132,6 @@ public class MoveGeneration {
             boolean foundEnemy = false;
             int enemyIndex = -1;
             for (int target : Precompute.kingMoves[square][rayIndex]) {
-                if (target == 62 || target == 7){
-                    System.out.println("square: " + square + ", rayIndex: " + rayIndex + ", target: " + target);
-                }
                 if (Bitboard.contains(friendlyBitboard, target)){
                     break;
                 }
@@ -183,4 +200,19 @@ public class MoveGeneration {
         return moveList;
     }
 
+    public long getFriendlyBitboard() {
+        return friendlyBitboard;
+    }
+
+    public long getEnemyBitboard() {
+        return enemyBitboard;
+    }
+
+    public long getOpponentAttackMap() {
+        return opponentAttackMap;
+    }
+
+    public boolean getSamePlayer(){
+        return samePlayer;
+    }
 }
