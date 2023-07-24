@@ -39,9 +39,9 @@ public class Board {
     GameController gameController;
 
     //board representation;
-    /*
-     * 0-4 bits - piece captured
-     * 
+    /*1111
+     * 1-4 bits - piece captured
+     * 5-10 bits - square moved to
      */
 
     int currentGameState;
@@ -49,6 +49,7 @@ public class Board {
     boolean inSearch = false;
 
     final int pieceCapturedMask = 0b1111;
+    final int squaredMovedToMask = 0b1111110000;
 
     long ZobristKey;
 
@@ -81,6 +82,9 @@ public class Board {
         move(m, false);
     }
     public void move(Move m, boolean inSearch){
+        if (m.isInvalid()){
+            throw new IllegalArgumentException("illegal move");
+        }
         this.inSearch = inSearch;
         boolean isCapture = m.isCapture();
         // boolean isKing = m.isKing();
@@ -107,6 +111,9 @@ public class Board {
         }
 
         if (!isPromotion) {
+            currentGameState &= ~squaredMovedToMask;
+            currentGameState |= targetSquare << 4;
+            // System.out.println("square: " + targetSquare + ", getter: " + getLastSquareMovedTo());
             moveToPieceList(movePieceType, colourToMoveIndex, startSquare, targetSquare);
             // board[targetSquare] = board[startSquare];
         }
@@ -116,7 +123,7 @@ public class Board {
             // board[targetSquare] = (byte)(Piece.king + ((whiteToMove) ? Piece.white : Piece.black));
         }
         // board[startSquare] = 0;
-
+        boardHistory.push(currentGameState);
         //next move
         if (!isCapture) nextToMove();
         if (!inSearch) fireBoardUpdate();
@@ -151,13 +158,13 @@ public class Board {
         }
         if (isCapture){
             addToPieceList(Piece.piece(capturedPiece), opponentColourIndex, capturedSquare);
-            currentGameState &= ~pieceCapturedMask;
-            currentGameState |= board[capturedSquare];
             moveCounter = 0;
         }
         else{
             moveCounter --;
         }
+
+        currentGameState = boardHistory.pop();
 
         if (!inSearch) fireBoardUpdate();
     }
@@ -165,7 +172,7 @@ public class Board {
     /**
      * Makes it so that the right player is supposed to move
      */
-    private void nextToMove(){
+    public void nextToMove(){
         whiteToMove = !whiteToMove;
         colourToMoveIndex = 1 - colourToMoveIndex;
         opponentColour = whiteToMove ? Piece.black : Piece.white;
@@ -185,7 +192,7 @@ public class Board {
     private void addToPieceList(int type, int colourIndex, int square){
         pieceMasks[colourIndex] |= 1L << square;
         getPieceList(type, colourIndex).add(square);
-        if (!inSearch) board[square] = (byte)(type + (colourIndex==0 ? Piece.white : Piece.black));
+        board[square] = (byte)(type + (colourIndex==0 ? Piece.white : Piece.black));
         ZobristKey ^= Zobrist.piecesArray[type-1][colourIndex][square];
     }
 
@@ -198,7 +205,7 @@ public class Board {
     private void removeToPieceList(int type, int colourIndex, int square){
         pieceMasks[colourIndex] -= 1L << square;
         getPieceList(type, colourIndex).remove(square);
-        if (!inSearch) board[square] = 0;
+        board[square] = 0;
         ZobristKey ^= Zobrist.piecesArray[type-1][colourIndex][square];
     }
 
@@ -212,8 +219,8 @@ public class Board {
         pieceMasks[colourIndex] |= 1L << targetSquare;
         pieceMasks[colourIndex] &= ~(1L << startSquare);
         getPieceList(type, colourIndex).move(startSquare, targetSquare);
-        if (!inSearch) board[targetSquare] = (byte)(type + (colourIndex==0 ? Piece.white : Piece.black));
-        if (!inSearch) board[startSquare] = 0;
+        board[targetSquare] = (byte)(type + (colourIndex==0 ? Piece.white : Piece.black));
+        board[startSquare] = 0;
         ZobristKey ^= Zobrist.piecesArray[type-1][colourIndex][startSquare];
         ZobristKey ^= Zobrist.piecesArray[type-1][colourIndex][targetSquare];
     }
@@ -233,6 +240,10 @@ public class Board {
         return whiteToMove;
     }
 
+    public int getLastSquareMovedTo(){
+        return (currentGameState & squaredMovedToMask) >>> 4;
+    }
+
     /**
      * Initialises new game
      */
@@ -242,8 +253,10 @@ public class Board {
         opponentColour = (whiteToMove) ? Piece.black : Piece.white;
         currentGameState = 0;
         moveCounter = 0;
+        ZobristKey = 0;
 
         board = new byte[64];
+        boardHistory = new Stack<>();
 
         whitePieceMask = 0;
         blackPieceMask = 0;

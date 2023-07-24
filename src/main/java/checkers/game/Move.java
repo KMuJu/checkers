@@ -70,6 +70,10 @@ public class Move {
         return (moveValue & distanceMask) >>> 18;
     }
 
+    public boolean isInvalid(){
+        return moveValue == 0;
+    }
+
     // used to find moves with that moves from the same start and target moves in list<Move>
     @Override
     public boolean equals(Object obj) {
@@ -82,5 +86,11 @@ public class Move {
 
     public static boolean sameMove(Move a, Move b){
         return a.moveValue == b.moveValue;
+    }
+
+    @Override
+    public String toString() {
+        // TODO Auto-generated method stub
+        return getStartSquare() + " - " + getTargetSquare();
     }
 }

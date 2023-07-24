@@ -1,7 +1,7 @@
 package checkers.game.AI;
 
 public class AiSettings {
-    public static final long moveTime = (long)(0.2*Math.pow(10, 9));
+    public static final long moveTime = (long)(0.5*Math.pow(10, 9));
 
     public final int maxSearchDepth = 20;
 

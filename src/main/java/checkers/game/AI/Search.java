@@ -7,7 +7,6 @@ import checkers.game.Board;
 import checkers.game.Move;
 import checkers.game.MoveGeneration;
 import checkers.game.TranspositionTable;
-import checkers.game.util.Bitboard;
 
 public class Search {
     Random random = new Random();
@@ -20,6 +19,7 @@ public class Search {
     
     TranspositionTable tt;
     MoveGeneration moveGeneration;
+    MoveGeneration pmMoveGeneration;
     Board board;
 
     Move bestMoveThisIteration;
@@ -36,15 +36,17 @@ public class Search {
     boolean clearTTeachMove;
     boolean abortSearch;
 
-    public Search(Board board, AiSettings aiSettings, MoveGeneration moveGeneration){
+    public Search(Board board, AiSettings aiSettings, MoveGeneration mg){
         this.board = board;
-        this.moveGeneration = moveGeneration;
+        moveGeneration = new MoveGeneration();
         this.settings = aiSettings;
+        pmMoveGeneration = mg;
 
         moveGeneration = new MoveGeneration();
         tt = new TranspositionTable(board, ttSize);
         moveOrdering = new MoveOrdering(moveGeneration, tt);
         invalidMove = Move.invalidMove;
+        evalutaions = new Evalutaions();
     }
 
     public void abortSearch(){
@@ -119,10 +121,15 @@ public class Search {
         }
 
         List<Move> moves = moveGeneration.generate(board);
-        if (moves.size() == 0){
+        boolean samePlayer = moveGeneration.getSamePlayer();
+        if (moves.size() == 0 && !samePlayer){
             //TODO fix draw
             //assumes win
             return -(immediateWinScore - plyFromRoot);
+        }
+        //no continuing moves was found after capture
+        if (moves.size()==0 && samePlayer){
+            return 0;
         }
 
         moveOrdering.orderMoves(board, moves, settings.useTranspositionTable);
@@ -130,9 +137,17 @@ public class Search {
         int evalType = TranspositionTable.UpperBound;
         Move bestMoveInPosition = invalidMove;
         for (int i = 0; i < moves.size(); i++) {
-            board.move(moves.get(i), true);
-            int eval = -searchMoves(depth-1, plyFromRoot+1, -beta, -alpha);
-            board.unmakeMove(moves.get(i), true);
+            Move move = moves.get(i);
+            boolean isSame = move.isCapture();
+            board.move(move, true);
+            int eval;
+            if (!isSame){
+                eval = -searchMoves(depth-1, plyFromRoot+1, -beta, -alpha);
+            }
+            else {
+                eval = searchMoves(depth - 1, plyFromRoot + 1, alpha, beta);
+            }
+            board.unmakeMove(move, true);
             //move is too good
             if (eval >= beta){
                 tt.StoreEvaluation(depth, plyFromRoot, eval, evalType, moves.get(i));
@@ -157,7 +172,10 @@ public class Search {
     }
 
     private int quiesenceSearch(int alpha, int beta){
-        int eval = evalutaions.evaluateBoard(board);
+        if (abortSearch){
+            return 0;
+        }
+        int eval = evalutaions.evaluateBoard(board, moveGeneration);
         if (eval >= beta){
             return beta;
         }
@@ -188,11 +206,15 @@ public class Search {
         if (random) return randomMove();
         abortSearch();
         // System.out.println("best move" + bestMove);
+        if (bestMove.isInvalid()){
+            System.out.println("!!!!!!!!!!!!!Invalid move from search!!!!!!!!!!!!");
+        }
         return bestMove;
     }
 
     private Move randomMove(){
-        List<Move> moveList = moveGeneration.getMoveList();
+
+        List<Move> moveList = pmMoveGeneration.getMoveList();
         if (moveList.size() == 0) return null;
         return moveList.get(random.nextInt(moveList.size()));
     }

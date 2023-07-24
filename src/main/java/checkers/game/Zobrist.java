@@ -65,8 +65,8 @@ public class Zobrist {
         
         for (int index = 0; index < 64; index++) {
             for (int pieceIndex = 0; pieceIndex < 2; pieceIndex++) {
-                piecesArray[pieceIndex][0][pieceIndex] = randomNumbers.poll();
-                piecesArray[pieceIndex][1][pieceIndex] = randomNumbers.poll();
+                piecesArray[pieceIndex][0][index] = randomNumbers.poll();
+                piecesArray[pieceIndex][1][index] = randomNumbers.poll();
             }
         }
     }
@@ -75,10 +75,10 @@ public class Zobrist {
         byte[] buffer = new byte[8];
         prng.nextBytes(buffer);
         long randomNumber = 0;
-        for (int i = 0; i < 8; i++) {
-            randomNumber += buffer[i] << (i*8);
+        for (int i = 0; i < buffer.length; i++) {
+            randomNumber |= buffer[i] << (i*8);
         }
-        return randomNumber;
+        return Math.abs(randomNumber);
 
     }
 }
