@@ -6,6 +6,7 @@ import checkers.game.Board;
 import checkers.game.Move;
 import checkers.game.MoveGeneration;
 import checkers.game.TranspositionTable;
+import checkers.game.util.Bitboard;
 import checkers.game.util.Piece;
 
 public class MoveOrdering {
@@ -19,6 +20,9 @@ public class MoveOrdering {
 
     public static int capturedPieceMultiplier = 10;
     public static int rankMultiplier = 3;
+    public static int enemyCanMakeKing = -25;
+    public static int canMakeKing = 25;
+    public static int canCapture;
 
     MoveOrdering(MoveGeneration moveGeneration, TranspositionTable tt){
         moveScores = new int[maxMoveCount];
@@ -48,8 +52,30 @@ public class MoveOrdering {
                 score += rankEval * rankMultiplier;
             }
             moveScores[i] = score;
-            if (Move.sameMove(hashMove, moves.get(i))){
+            if (hashMove != null && Move.sameMove(hashMove, moves.get(i))){
                 score += 25;
+            }
+
+            //opponent can make king next move
+            long enemyBitboard = board.getColourPieceMask(1-board.colourToMoveIndex);
+            int enemyRankCheck = (board.whiteToMove()) ? 6 : 1;
+            long rankBitboard = ((long)0b11111111) << (8 * enemyRankCheck);
+            if ((enemyBitboard & rankBitboard) != 0){
+                score += enemyCanMakeKing;
+            }
+
+            //can make king next move
+            long friendlyBitboard = board.getColourPieceMask(board.colourToMoveIndex);
+            int rankCheck = (board.whiteToMove()) ? 6 : 1;
+            rankBitboard = ((long)0b11111111) << (8 * rankCheck);
+            if ((friendlyBitboard & rankBitboard) != 0){
+                score += canMakeKing;
+            }
+
+            //enemy can capture piece
+            long enemyCaptureMask = moveGeneration.getOpponentAttackMap();
+            if (Bitboard.contains(enemyCaptureMask, moves.get(i).getTargetSquare())){
+                score -= canCapture;
             }
         }
 
