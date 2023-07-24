@@ -1,0 +1,41 @@
+function alphabeta(depth, alpha, beta)
+    if depth == 0
+        return quiesenceSearch(alpha, beta)
+    
+    moveList = generate(board)
+    if moveList.size() == 0
+        return win or draw
+
+    for move in moveList
+        move()
+        value = -alphabeta(depth - 1, -beta, - alpha)
+        undo() 
+        if value >= beta
+            break
+        
+        if value > alpha
+            alpha = value
+            store move
+        
+    store in tt
+
+function alphabeta(depth, alpha, beta, same)
+    if depth == 0
+        return quiesenceSearch(alpha, beta)
+
+    moveList = generate(board)
+    if moveList.size() == 0
+        return win or draw
+    orderMoves()
+
+    for each move in moveList
+        samePlayer = move.isCapture
+        if samePlayer
+            value = alphabeta(depth - 1, alpha, beta, true)
+        else
+            value = -alphabeta(depth - 1, -beta, -alpha, false)
+        if value >= beta
+            break
+        
+        if value > alpha
+            alpha = value
