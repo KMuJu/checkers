@@ -13,7 +13,7 @@ public class PlayerManager {
     public int colourToMoveIndex;
 
     //{white, black} if player is human
-    public boolean[] playerIsHuman = new boolean[]{false, false};
+    public boolean[] playerIsHuman = new boolean[]{false, true};
     boolean choosingMove = false;
     int start, target;
 
@@ -37,6 +37,8 @@ public class PlayerManager {
         generateMoves();
         colourToMoveIndex = board.colourToMoveIndex;
 
+        AiSettings aiSettings = AiSettings.useTtIterativFixedNoClear;
+
         players = new AbstractPlayer[2];
         //add players to array based on if player is human from boolean array
         for (int i = 0; i < 2; i++) {
@@ -44,12 +46,11 @@ public class PlayerManager {
                 players[i] = new HumanPlayer(this);
             }
             else{
-                AIPlayer player = new AIPlayer(moveGeneration, this);
+                AIPlayer player = new AIPlayer(moveGeneration, this, aiSettings);
                 player.setTimer(new Timer(player, AiSettings.moveTime));
                 players[i] = player;
             }
         }
-        System.out.println("AAAAAAAAAAAA");
         //first player can move
         players[1].canMove();
     }
@@ -67,10 +68,10 @@ public class PlayerManager {
         // if opponents can't move -> win
         // if opponent has no pieces -> win
         // if moveCounter >= maxCounts -> draw TODO: implement draw
-        if (moves.size() == 0 || board.checkMoveCounter() || board.opponentHasNoPieces()){
+        if ((moves.size() == 0 && !moveGeneration.samePlayer) || board.checkMoveCounter() || board.opponentHasNoPieces()){
             gameController.win(board.whiteToMove());
             for (int i = 0; i < 2; i++) {
-                if (playerIsHuman[i]){
+                if (!playerIsHuman[i]){
                     ((AIPlayer) players[i]).timer.stop();
                 }
             }
@@ -96,8 +97,14 @@ public class PlayerManager {
      * and checks if the player that made the move wins
      */
     private void generateMoves() {
+        // Long start = System.nanoTime();
         moves = moveGeneration.generate(board);
+        // System.out.println((System.nanoTime() - start) / Math.pow(10,9));
         checkIfWin();
+        if (moveGeneration.samePlayer && moves.size()==0){
+            board.nextToMove();
+            generateMoves();
+        }
     }
 
     //TODO: fix player behavior,(Stop next player, get previous player to play)
