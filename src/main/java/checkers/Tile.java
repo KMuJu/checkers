@@ -17,6 +17,7 @@ public class Tile extends StackPane {
     int x, y;
     byte piece;
     int TILESIZE;
+    Text t;
     Tile(int index, int piece, int TILESIZE){
         x = index % 8;
         y = index / 8;
@@ -29,12 +30,17 @@ public class Tile extends StackPane {
         setStyle("-fx-background-color:" + farge);
         setBorder(new Border(new BorderStroke(Color.BLACK, 
             BorderStrokeStyle.SOLID, CornerRadii.EMPTY, null)));
+
+        t = new Text(Integer.toString(index));
+        t.setFont( new Font(20));
+        getChildren().add(t);
     }
 
     public void update(byte piece){
         Paint borderPaint = (Piece.color(piece) == Piece.white) ? Color.BLACK : Color.WHITE;
         if (piece == 0){
             getChildren().clear();
+            getChildren().add(t);
         }
         else{
             Paint p = (Piece.color(piece) == Piece.white) ? Color.WHITE : Color.BLACK;
