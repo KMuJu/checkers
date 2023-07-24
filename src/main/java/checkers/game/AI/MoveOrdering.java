@@ -83,7 +83,7 @@ public class MoveOrdering {
     }
 
     public void Sort(List<Move> moves){
-        for (int i = 0; i < moves.size(); i++) {
+        for (int i = 0; i < moves.size() - 1; i++) {
             for (int j = i+1; j > 0; j--) {
                 int swapIndex = j - 1;
                 if (moveScores[swapIndex] < moveScores[j]){
