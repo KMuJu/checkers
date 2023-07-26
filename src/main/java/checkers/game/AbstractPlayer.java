@@ -15,7 +15,14 @@ public abstract class AbstractPlayer {
      */
     public void move(Move m){
         pm.move(m);
+        if (m.isCapture()) noMoveAfterCapture();
         afterMove();
+    }
+
+    public void noMoveAfterCapture(){
+        if (pm.moves.size() == 0){
+            pm.move(Move.noMove);
+        }
     }
 
     /**

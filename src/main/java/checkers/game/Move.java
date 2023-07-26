@@ -12,8 +12,10 @@ public class Move {
     public static final int captureMask = 1 << 23;
 
     public static Move invalidMove = new Move(0);
+    public static Move noMove = new Move(-1);
 
     int moveValue;
+    
     public Move(int start, int target, boolean king){
         int distance = Coord.diagonalDistance(start, target);
         moveValue = start + (target << 6);
@@ -41,6 +43,10 @@ public class Move {
 
     public Move(int moveValue){
         this.moveValue =  moveValue;
+    }
+
+    public boolean isNoMove(){
+        return moveValue == -1;
     }
 
     public int getStartSquare(){

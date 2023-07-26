@@ -42,6 +42,7 @@ public class Board {
     /*1111
      * 1-4 bits - piece captured
      * 5-10 bits - square moved to
+     * 11 bit - colour moved index
      */
 
     int currentGameState;
@@ -50,6 +51,7 @@ public class Board {
 
     final int pieceCapturedMask = 0b1111;
     final int squaredMovedToMask = 0b1111110000;
+    final int colourIndexMovedMask = 1 << 10;
 
     long ZobristKey;
 
@@ -83,8 +85,15 @@ public class Board {
     }
     public void move(Move m, boolean inSearch){
         if (m.isInvalid()){
-            throw new IllegalArgumentException("illegal move");
+
+            return;
+            // throw new IllegalArgumentException("illegal move");
         }
+        if (m.isNoMove()){
+            nextToMove();
+            return;
+        }
+        // System.out.println(m);
         this.inSearch = inSearch;
         boolean isCapture = m.isCapture();
         // boolean isKing = m.isKing();
@@ -123,6 +132,9 @@ public class Board {
             // board[targetSquare] = (byte)(Piece.king + ((whiteToMove) ? Piece.white : Piece.black));
         }
         // board[startSquare] = 0;
+        currentGameState &= ~colourIndexMovedMask;
+        if (colourToMoveIndex == 1) currentGameState |= colourIndexMovedMask;
+
         boardHistory.push(currentGameState);
         //next move
         if (!isCapture) nextToMove();
@@ -244,10 +256,16 @@ public class Board {
         return (currentGameState & squaredMovedToMask) >>> 4;
     }
 
+    public int getColourMovedIndex(){
+        return (currentGameState >>> 10) & 1;
+    }
+
     /**
      * Initialises new game
      */
     public void init(){
+
+
         whiteToMove = false;
         colourToMoveIndex = 1;
         opponentColour = (whiteToMove) ? Piece.black : Piece.white;
