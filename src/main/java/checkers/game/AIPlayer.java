@@ -15,7 +15,7 @@ public class AIPlayer extends AbstractPlayer{
         super(pm);
         this.moveGeneration = moveGeneration;
         this.aiSettings = aiSettings;
-        search = new Search(pm.board, aiSettings, moveGeneration);
+        search = new Search(pm.board, aiSettings, moveGeneration, pm);
     }
 
     public void setTimer(AnimationTimer timer) {
@@ -29,6 +29,7 @@ public class AIPlayer extends AbstractPlayer{
     }
 
     public void startSearch(){
+        System.out.println("Starter search");
         search.startSearch();
     }
 

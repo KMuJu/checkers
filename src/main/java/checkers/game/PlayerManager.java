@@ -37,7 +37,7 @@ public class PlayerManager {
         generateMoves();
         colourToMoveIndex = board.colourToMoveIndex;
 
-        AiSettings aiSettings = AiSettings.useTtIterativFixedNoClear;
+        AiSettings aiSettings = AiSettings.test;
 
         players = new AbstractPlayer[2];
         //add players to array based on if player is human from boolean array
@@ -68,7 +68,7 @@ public class PlayerManager {
         // if opponents can't move -> win
         // if opponent has no pieces -> win
         // if moveCounter >= maxCounts -> draw TODO: implement draw
-        if ((moves.size() == 0 && !moveGeneration.samePlayer) || board.checkMoveCounter() || board.opponentHasNoPieces()){
+        if ((moves.size() == 0 && !MoveGeneration.samePlayer) || board.checkMoveCounter() || board.opponentHasNoPieces()){
             gameController.win(board.whiteToMove());
             for (int i = 0; i < 2; i++) {
                 if (!playerIsHuman[i]){
@@ -87,8 +87,12 @@ public class PlayerManager {
         if (m == null) return;
         board.move(m);
         generateMoves();
-        colourToMoveIndex = board.colourToMoveIndex;
         movesDone.push(m);
+        if (m.isCapture() && moves.size() == 0){
+            board.move(Move.noMove);
+            generateMoves();
+        }
+        colourToMoveIndex = board.colourToMoveIndex;
         getNextPlayer().canMove();
     }
 
@@ -101,10 +105,10 @@ public class PlayerManager {
         moves = moveGeneration.generate(board);
         // System.out.println((System.nanoTime() - start) / Math.pow(10,9));
         checkIfWin();
-        if (moveGeneration.samePlayer && moves.size()==0){
-            board.nextToMove();
-            generateMoves();
-        }
+    }
+
+    public void samePlayerNoMoves(){
+        board.nextToMove();
     }
 
     //TODO: fix player behavior,(Stop next player, get previous player to play)

@@ -22,13 +22,13 @@ public class HumanPlayer extends AbstractPlayer {
      * @param square - where a click happened
      */
     public void klikk(int square){
-        List<Move> moves = pm.moves;
         if (!choosingMove){
             start = square;
             choosingMove = true;
             pm.showMovesForIndex(square);
             return;
         }
+        List<Move> moves = pm.moves;
 
         target = square;
         Move m = new Move(start, target, false);

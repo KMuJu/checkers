@@ -1,9 +1,9 @@
 package checkers.game.AI;
 
 public class AiSettings {
-    public static final long moveTime = (long)(0.5*Math.pow(10, 9));
+    public static final long moveTime = (long)(1*Math.pow(10, 9));
 
-    public final int maxSearchDepth = 20;
+    public final int maxSearchDepth = 10;
 
     public boolean useTranspositionTable;
     public boolean useIterativSearch;
@@ -15,6 +15,10 @@ public class AiSettings {
 
     public static AiSettings useTtIterativFixedNoClear = new AiSettings(true, true, true, false);
     public static AiSettings useTtNotIterativFixedNoClear = new AiSettings(true, false, true, false);
+    public static AiSettings test = new AiSettings(true, 
+                                                   true,
+                                                   true,
+                                                   true);
 
     public AiSettings(boolean useTranspositionTable, boolean useIterativSearch, boolean useFixedDepthSearch,
             boolean clearTTeachMove) {

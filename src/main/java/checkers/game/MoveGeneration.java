@@ -26,8 +26,10 @@ public class MoveGeneration {
 
     long opponentAttackMap;
 
+    long[] attackMap;
+
     int previousColourIndexMoved = -1;
-    boolean samePlayer;
+    static boolean samePlayer;
 
     public void init(){
 
@@ -37,7 +39,8 @@ public class MoveGeneration {
 
         moveList = new ArrayList<>(32);
         mustCapture = false;
-
+        previousColourIndexMoved = board.getColourMovedIndex();
+        attackMap = new long[] {0,0};
     }
 
     //TODO check pieces that are more likely to be able to capture
@@ -114,16 +117,18 @@ public class MoveGeneration {
         }
 
         if (!mustCapture) moveList.addAll(tempMoves);
-        previousColourIndexMoved = colourToMoveIndex;
+        // previousColourIndexMoved = colourToMoveIndex;
         return moveList;
     }
     
     private void generateManAttackMap() {
         opponentAttackMap = 0;
+        // attackMap[opponentColourIndex] = 0;
         PieceList enemyMen = board.getPieceList(Piece.man, opponentColourIndex);
         for (int i = 0; i < enemyMen.size(); i++) {
             int square = enemyMen.at(i);
             opponentAttackMap |= Precompute.manCaptureMask[opponentColourIndex][square];
+            attackMap[opponentColourIndex] |= Precompute.manCaptureMask[opponentColourIndex][square];
         }
     }
 
@@ -214,5 +219,9 @@ public class MoveGeneration {
 
     public boolean getSamePlayer(){
         return samePlayer;
+    }
+
+    public long getAttackMap(int index){
+        return attackMap[index];
     }
 }

@@ -120,8 +120,6 @@ public class Board {
         }
 
         if (!isPromotion) {
-            currentGameState &= ~squaredMovedToMask;
-            currentGameState |= targetSquare << 4;
             // System.out.println("square: " + targetSquare + ", getter: " + getLastSquareMovedTo());
             moveToPieceList(movePieceType, colourToMoveIndex, startSquare, targetSquare);
             // board[targetSquare] = board[startSquare];
@@ -131,7 +129,11 @@ public class Board {
             addToPieceList(Piece.king, colourToMoveIndex, targetSquare);
             // board[targetSquare] = (byte)(Piece.king + ((whiteToMove) ? Piece.white : Piece.black));
         }
-        // board[startSquare] = 0;
+        //add last squared moved to game state
+        currentGameState &= ~squaredMovedToMask;
+        currentGameState |= targetSquare << 4;
+
+        //add index moved
         currentGameState &= ~colourIndexMovedMask;
         if (colourToMoveIndex == 1) currentGameState |= colourIndexMovedMask;
 
@@ -147,9 +149,13 @@ public class Board {
     public void unmakeMove(Move m, boolean inSearch){
         this.inSearch = inSearch;
         
+        if (m.isNoMove()){
+            nextToMove();
+            return;
+        }
+        
         boolean isCapture = m.isCapture();
         boolean isPromotion = m.isPromotion();
-        if (!isCapture) nextToMove(); // to make the right player move
 
         int startSquare = m.getStartSquare();
         int targetSquare = m.getTargetSquare();
@@ -157,7 +163,9 @@ public class Board {
         int capturedSquare = m.getCapturedSquare();
         byte capturedPiece = (byte)(currentGameState & pieceCapturedMask);
 
-        int opponentColourIndex = 1 - colourToMoveIndex;
+        int colourMovedIndex = getColourMovedIndex();
+        int opponentColourIndex = 1 - colourMovedIndex;
+        indexToMove(colourMovedIndex);
         
         byte movePieceType = Piece.piece(board[targetSquare]);
         
@@ -176,7 +184,8 @@ public class Board {
             moveCounter --;
         }
 
-        currentGameState = boardHistory.pop();
+        boardHistory.pop();
+        currentGameState = boardHistory.peek();
 
         if (!inSearch) fireBoardUpdate();
     }
@@ -187,6 +196,13 @@ public class Board {
     public void nextToMove(){
         whiteToMove = !whiteToMove;
         colourToMoveIndex = 1 - colourToMoveIndex;
+        opponentColour = whiteToMove ? Piece.black : Piece.white;
+        friendlyColour = whiteToMove ? Piece.white : Piece.black;
+    }
+
+    private void indexToMove(int index){
+        whiteToMove = index == 0;
+        colourToMoveIndex = index;
         opponentColour = whiteToMove ? Piece.black : Piece.white;
         friendlyColour = whiteToMove ? Piece.white : Piece.black;
     }
@@ -275,6 +291,7 @@ public class Board {
 
         board = new byte[64];
         boardHistory = new Stack<>();
+        boardHistory.push(0);
 
         whitePieceMask = 0;
         blackPieceMask = 0;
@@ -312,7 +329,7 @@ public class Board {
         fireBoardUpdate();
     }
 
-    private void fireBoardUpdate(){
+    public void fireBoardUpdate(){
         gameController.fireBoardUpdate(board);
     }
 

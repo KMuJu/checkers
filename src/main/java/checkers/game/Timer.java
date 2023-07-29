@@ -34,9 +34,9 @@ public class Timer extends AnimationTimer{
             start = System.nanoTime();
             wasPaused = true;
         } else wasPaused = false;
-        if (!wasPaused){
-            // player;
-        }
+        // if (!wasPaused){
+        //     // player;
+        // }
         paused = false;
     }
 
