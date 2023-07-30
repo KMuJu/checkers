@@ -147,6 +147,9 @@ public class Board {
         unmakeMove(m, false);
     }
     public void unmakeMove(Move m, boolean inSearch){
+        if (boardHistory.size() == 0){
+            return;
+        }
         this.inSearch = inSearch;
         
         if (m.isNoMove()){
